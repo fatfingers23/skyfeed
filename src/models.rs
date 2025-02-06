@@ -1,4 +1,4 @@
-use atrium_api::types::LimitedNonZeroU8;
+use atrium_api::types::{string::Language, LimitedNonZeroU8};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
@@ -34,6 +34,8 @@ pub struct Post {
     pub text: String,
     pub labels: Vec<Label>,
     pub timestamp: DateTime<Utc>,
+    pub languages: Option<Vec<Language>>,
+    pub alt_text: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

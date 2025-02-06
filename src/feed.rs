@@ -4,6 +4,7 @@ use atrium_api::app::bsky::feed::describe_feed_generator::{
 use atrium_api::app::bsky::feed::get_feed_skeleton::OutputData as FeedSkeleton;
 use atrium_api::app::bsky::feed::get_feed_skeleton::Parameters as FeedSkeletonQuery;
 use atrium_api::app::bsky::feed::get_feed_skeleton::ParametersData as FeedSkeletonParameters;
+use atrium_api::app::bsky::feed::post::RecordEmbedRefs;
 use atrium_api::record::KnownRecord;
 use atrium_api::types::{Object, Union};
 use chrono::DateTime;
@@ -19,6 +20,7 @@ use jetstream_oxide::{
 use log::{error, info};
 use std::fmt::Debug;
 use std::net::SocketAddr;
+use std::process::id;
 use warp::Filter;
 
 use crate::models::{Did, Label, Post, Request, Service, Uri};
@@ -122,6 +124,7 @@ pub trait Feed<Handler: FeedHandler + Clone + Send + Sync + 'static> {
                     wanted_collections: vec![
                         Nsid::new("app.bsky.feed.post".to_string()).unwrap(),
                         Nsid::new("app.bsky.feed.like".to_string()).unwrap(),
+                        Nsid::new("app.bsky.feed.reply".to_string()).unwrap(),
                     ],
                     compression: JetstreamCompression::Zstd,
                     ..Default::default()
@@ -162,6 +165,7 @@ pub trait Feed<Handler: FeedHandler + Clone + Send + Sync + 'static> {
                                     error!("Invalid post timestamp: {time_us}");
                                     continue;
                                 };
+
                                 handler
                                     .insert_post(Post {
                                         author_did: info.did.to_string(),
@@ -179,6 +183,29 @@ pub trait Feed<Handler: FeedHandler + Clone + Send + Sync + 'static> {
                                                 atrium_api::app::bsky::feed::post::RecordLabelsRefs::ComAtprotoLabelDefsSelfLabels(object) => object.values.clone().into_iter().map(|label| Label::from(label.val.clone())).collect::<Vec<Label>>(),
                                             }).unwrap_or_default(),
                                         timestamp: time,
+                                        languages: record.langs.clone(),
+                                        alt_text: record.embed.as_ref().and_then(|embed| match embed {
+                                            Union::Refs(refs) => Some(refs),
+                                            Union::Unknown(_) => None,
+                                        }).map(|embed_ref| match embed_ref {
+                                            RecordEmbedRefs::AppBskyEmbedImagesMain(object) => {
+                                                let possible_alt_text: Vec<String> = object.data.images.iter().filter(|x| !x.alt.is_empty()).map(|image| image.alt.clone()).collect();
+                                                if possible_alt_text.is_empty() {
+                                                    None
+                                                } else {
+                                                    Some(possible_alt_text)
+                                                }
+                                            },
+                                            atrium_api::app::bsky::feed::post::RecordEmbedRefs::AppBskyEmbedVideoMain(object) => {
+                                                match object.alt.as_ref() {
+                                                    Some(alt_text) => Some(vec![alt_text.clone()]),
+                                                    None => None,
+                                                }
+                                            },
+                                            RecordEmbedRefs::AppBskyEmbedExternalMain(_) => None,
+                                            RecordEmbedRefs::AppBskyEmbedRecordMain(_) => None,
+                                            RecordEmbedRefs::AppBskyEmbedRecordWithMediaMain(_) => None,
+                                        }).unwrap_or_default()
                                     })
                                     .await;
                             }
