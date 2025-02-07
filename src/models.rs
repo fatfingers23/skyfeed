@@ -2,6 +2,7 @@ use atrium_api::{
     app::bsky::{
         embed::record_with_media::MainMediaRefs,
         feed::post::{RecordEmbedRefs, RecordLabelsRefs},
+        richtext::facet::MainFeaturesItem,
     },
     types::{BlobRef, LimitedNonZeroU8, Object, TypedBlobRef, Union},
 };
@@ -43,6 +44,7 @@ pub struct Post {
     pub langs: Vec<String>,
     pub timestamp: DateTime<Utc>,
     pub embed: Option<Embed>,
+    pub facet_features: Vec<MainFeaturesItem>,
 }
 
 #[derive(Debug, Clone)]

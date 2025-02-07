@@ -5,7 +5,7 @@ use atrium_api::app::bsky::feed::get_feed_skeleton::OutputData as FeedSkeleton;
 use atrium_api::app::bsky::feed::get_feed_skeleton::Parameters as FeedSkeletonQuery;
 use atrium_api::app::bsky::feed::get_feed_skeleton::ParametersData as FeedSkeletonParameters;
 use atrium_api::record::KnownRecord;
-use atrium_api::types::Object;
+use atrium_api::types::{Object, Union};
 use chrono::DateTime;
 use env_logger::Env;
 use jetstream_oxide::exports::Nsid;
@@ -179,6 +179,21 @@ pub trait Feed<Handler: FeedHandler + Clone + Send + Sync + 'static> {
                                         .langs
                                         .iter()
                                         .filter_map(|lang| serde_json::to_string(&lang).ok())
+                                        .collect(),
+                                    facet_features: record
+                                        .facets
+                                        .iter()
+                                        .flat_map(|facet| {
+                                            facet.iter().flat_map(|facet| {
+                                                facet.features.iter().filter_map(|feature| {
+                                                    match feature {
+                                                        Union::Refs(main_fe) => Some(main_fe),
+                                                        Union::Unknown(_) => None,
+                                                    }
+                                                })
+                                            })
+                                        })
+                                        .cloned()
                                         .collect(),
                                 };
                                 handler.insert_post(post).await;
