@@ -1,4 +1,4 @@
-use crate::models::{FeedResult, Post, Request, Uri};
+use crate::models::{Did, FeedResult, Post, Request, Uri};
 
 /// A feed handler is responsible for
 /// - Storing and managing firehose input.
@@ -10,6 +10,7 @@ pub trait FeedHandler {
         &mut self,
         like_uri: Uri,
         liked_post_uri: Uri,
+        user_who_liked: Did,
     ) -> impl std::future::Future<Output = ()> + Send;
     fn delete_like(&mut self, like_uri: Uri) -> impl std::future::Future<Output = ()> + Send;
     fn serve_feed(&self, request: Request) -> impl std::future::Future<Output = FeedResult> + Send;

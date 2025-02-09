@@ -220,8 +220,9 @@ pub trait Feed<Handler: FeedHandler + Clone + Send + Sync + 'static> {
                                     collection.to_string(),
                                     rkey
                                 );
+                                let user_did = Did(info.did.to_string());
                                 handler
-                                    .like_post(Uri(uri), Uri(record.subject.uri.clone()))
+                                    .like_post(Uri(uri), Uri(record.subject.uri.clone()), user_did)
                                     .await;
                             }
                             CommitEvent::Delete {
